@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HealthLens AI — Blood Report Analyzer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet" />
+  <style>
+    /* ─── Reset & Base ──────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:   #0D2137;
+      --navy2:  #112840;
+      --teal:   #028090;
+      --mint:   #02C39A;
+      --light:  #F4FAF8;
+      --white:  #ffffff;
+      --text:   #1a2e42;
+      --muted:  #5a7a8a;
+
+      --normal:   #3B6D11;
+      --normal-bg:#eaf5e0;
+      --high:     #D85A30;
+      --high-bg:  #fdeee8;
+      --low:      #BA7517;
+      --low-bg:   #fef3e0;
+      --critical: #A32D2D;
+      --critical-bg:#fde8e8;
+
+      --radius: 14px;
+      --shadow: 0 4px 24px rgba(13,33,55,.10);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--light);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ─── Nav ───────────────────────────────────────── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--navy);
+      padding: 0 2rem;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 12px rgba(0,0,0,.2);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+    }
+
+    .nav-logo svg {
+      width: 32px;
+      height: 32px;
+    }
+
+    .nav-logo-text {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.25rem;
+      color: var(--white);
+      letter-spacing: -.01em;
+    }
+
+    .nav-logo-text span { color: var(--mint); }
+
+    .ai-badge {
+      background: linear-gradient(135deg, var(--teal), var(--mint));
+      color: var(--white);
+      font-size: .7rem;
+      font-weight: 600;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: .28rem .7rem;
+      border-radius: 999px;
+    }
+
+    /* ─── Screens ───────────────────────────────────── */
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* ─── Upload Screen ─────────────────────────────── */
+    #upload-screen {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 4rem 1.5rem 5rem;
+    }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      background: rgba(2,192,154,.12);
+      color: var(--mint);
+      font-size: .78rem;
+      font-weight: 600;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      padding: .35rem .85rem;
+      border-radius: 999px;
+      border: 1px solid rgba(2,192,154,.25);
+      margin-bottom: 1.2rem;
+    }
+
+    .hero h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      line-height: 1.15;
+      color: var(--navy);
+      margin-bottom: 1rem;
+    }
+
+    .hero p {
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    /* Drop Zone */
+    .drop-zone {
+      border: 2px dashed rgba(2,128,144,.35);
+      border-radius: var(--radius);
+      background: var(--white);
+      padding: 3.5rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s, transform .15s;
+      box-shadow: var(--shadow);
+    }
+
+    .drop-zone:hover,
+    .drop-zone.dragover {
+      border-color: var(--teal);
+      background: rgba(2,128,144,.03);
+      transform: translateY(-2px);
+    }
+
+    .drop-zone-icon {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, rgba(2,128,144,.12), rgba(2,192,154,.12));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.2rem;
+    }
+
+    .drop-zone-icon svg { color: var(--teal); }
+
+    .drop-zone h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--navy);
+      margin-bottom: .4rem;
+    }
+
+    .drop-zone p {
+      font-size: .88rem;
+      color: var(--muted);
+      margin-bottom: 1.6rem;
+    }
+
+    #file-input { display: none; }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      background: linear-gradient(135deg, var(--teal), #016e7c);
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      font-size: .92rem;
+      font-weight: 600;
+      padding: .75rem 1.75rem;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: opacity .2s, transform .15s;
+      box-shadow: 0 4px 14px rgba(2,128,144,.3);
+    }
+
+    .btn-primary:hover { opacity: .88; transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin: 1.8rem 0;
+      color: var(--muted);
+      font-size: .85rem;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(0,0,0,.08);
+    }
+
+    .btn-demo {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .6rem;
+      background: transparent;
+      border: 2px solid rgba(2,192,154,.35);
+      color: var(--teal);
+      font-family: 'DM Sans', sans-serif;
+      font-size: .92rem;
+      font-weight: 600;
+      padding: .75rem 1.75rem;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background .2s, border-color .2s, color .2s;
+    }
+
+    .btn-demo:hover {
+      background: rgba(2,192,154,.08);
+      border-color: var(--mint);
+      color: var(--mint);
+    }
+
+    /* Feature Pills */
+    .feature-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .7rem;
+      justify-content: center;
+      margin-top: 2.5rem;
+    }
+
+    .pill {
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+      background: var(--white);
+      border: 1px solid rgba(2,128,144,.18);
+      color: var(--teal);
+      font-size: .82rem;
+      font-weight: 500;
+      padding: .4rem .95rem;
+      border-radius: 999px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.05);
+    }
+
+    .pill-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--mint);
+      flex-shrink: 0;
+    }
+
+    /* ─── Loading Screen ────────────────────────────── */
+    #loading-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: calc(100vh - 64px);
+      gap: 1.5rem;
+    }
+
+    .spinner-wrap {
+      position: relative;
+      width: 80px;
+      height: 80px;
+    }
+
+    .spinner {
+      width: 80px;
+      height: 80px;
+      border: 5px solid rgba(2,192,154,.15);
+      border-top-color: var(--mint);
+      border-radius: 50%;
+      animation: spin .9s linear infinite;
+    }
+
+    .spinner-inner {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      width: 52px;
+      height: 52px;
+      border: 4px solid rgba(2,128,144,.12);
+      border-bottom-color: var(--teal);
+      border-radius: 50%;
+      animation: spin 1.4s linear infinite reverse;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    #loading-screen h3 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.4rem;
+      color: var(--navy);
+    }
+
+    #loading-screen p {
+      font-size: .9rem;
+      color: var(--muted);
+    }
+
+    /* ─── Results Screen ────────────────────────────── */
+    #results-screen {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 5rem;
+    }
+
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .results-header h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 2rem;
+      color: var(--navy);
+    }
+
+    .btn-reset {
+      display: inline-flex;
+      align-items: center;
+      gap: .45rem;
+      background: var(--white);
+      border: 2px solid rgba(2,128,144,.25);
+      color: var(--teal);
+      font-family: 'DM Sans', sans-serif;
+      font-size: .88rem;
+      font-weight: 600;
+      padding: .6rem 1.3rem;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background .2s, border-color .2s;
+    }
+
+    .btn-reset:hover {
+      background: rgba(2,128,144,.05);
+      border-color: var(--teal);
+    }
+
+    /* Section Titles */
+    .section-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.4rem;
+      color: var(--navy);
+      margin-bottom: 1.1rem;
+    }
+
+    /* AI Summary Card */
+    .summary-card {
+      background: linear-gradient(135deg, var(--navy) 0%, #143350 100%);
+      border-radius: var(--radius);
+      padding: 2rem 2.2rem;
+      color: var(--white);
+      margin-bottom: 2.5rem;
+      box-shadow: 0 8px 28px rgba(13,33,55,.18);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .summary-card::before {
+      content: '';
+      position: absolute;
+      top: -40px;
+      right: -40px;
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      background: rgba(2,192,154,.07);
+    }
+
+    .summary-card-label {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      background: rgba(2,192,154,.18);
+      color: var(--mint);
+      font-size: .73rem;
+      font-weight: 600;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: .25rem .7rem;
+      border-radius: 999px;
+      margin-bottom: .9rem;
+    }
+
+    .summary-card p {
+      font-size: 1.02rem;
+      line-height: 1.7;
+      color: rgba(255,255,255,.9);
+    }
+
+    /* Metrics Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .metric-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      padding: 1.3rem 1.4rem;
+      box-shadow: var(--shadow);
+      border-top: 3px solid var(--border-color, #ccc);
+      transition: transform .15s;
+    }
+
+    .metric-card:hover { transform: translateY(-3px); }
+
+    .metric-name {
+      font-size: .82rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--muted);
+      margin-bottom: .5rem;
+    }
+
+    .metric-value-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: .9rem;
+    }
+
+    .metric-value {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.7rem;
+      color: var(--navy);
+      line-height: 1;
+    }
+
+    .metric-unit {
+      font-size: .78rem;
+      color: var(--muted);
+      margin-left: .25rem;
+    }
+
+    .metric-badge {
+      font-size: .67rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: .2rem .55rem;
+      border-radius: 999px;
+      border: 1.5px solid currentColor;
+    }
+
+    .metric-badge.normal { color: var(--normal); background: var(--normal-bg); border-color: var(--normal); }
+    .metric-badge.high   { color: var(--high);   background: var(--high-bg);   border-color: var(--high);   }
+    .metric-badge.low    { color: var(--low);     background: var(--low-bg);    border-color: var(--low);    }
+    .metric-badge.critical { color: var(--critical); background: var(--critical-bg); border-color: var(--critical); }
+
+    .metric-range {
+      font-size: .75rem;
+      color: var(--muted);
+      margin-bottom: .5rem;
+    }
+
+    /* Progress Bar */
+    .progress-track {
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(0,0,0,.07);
+      position: relative;
+      overflow: visible;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 999px;
+      min-width: 8px;
+      max-width: 100%;
+    }
+
+    .progress-fill.normal   { background: var(--normal); }
+    .progress-fill.high     { background: var(--high);   }
+    .progress-fill.low      { background: var(--low);    }
+    .progress-fill.critical { background: var(--critical); }
+
+    /* Insights */
+    .insights-list {
+      display: flex;
+      flex-direction: column;
+      gap: .85rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .insight-card {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      background: var(--white);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.3rem;
+      box-shadow: var(--shadow);
+    }
+
+    .insight-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      margin-top: .05rem;
+    }
+
+    .insight-icon.warn  { background: var(--low-bg);      }
+    .insight-icon.good  { background: var(--normal-bg);   }
+    .insight-icon.info  { background: rgba(2,128,144,.1); }
+    .insight-icon.alert { background: var(--high-bg);     }
+
+    .insight-body h4 {
+      font-size: .95rem;
+      font-weight: 600;
+      color: var(--navy);
+      margin-bottom: .2rem;
+    }
+
+    .insight-body p {
+      font-size: .87rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    /* Recommendations */
+    .recs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .rec-card {
+      background: linear-gradient(135deg, var(--teal), #016e7c);
+      border-radius: var(--radius);
+      padding: 1.4rem 1.5rem;
+      color: var(--white);
+      box-shadow: 0 4px 16px rgba(2,128,144,.2);
+    }
+
+    .rec-card h4 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.05rem;
+      margin-bottom: .45rem;
+    }
+
+    .rec-card p {
+      font-size: .85rem;
+      line-height: 1.55;
+      opacity: .88;
+    }
+
+    /* Disclaimer */
+    .disclaimer {
+      display: flex;
+      align-items: flex-start;
+      gap: .75rem;
+      background: rgba(186,117,23,.06);
+      border: 1px solid rgba(186,117,23,.2);
+      border-radius: 10px;
+      padding: 1rem 1.2rem;
+      font-size: .82rem;
+      color: #7a5a1e;
+      line-height: 1.5;
+    }
+
+    .disclaimer svg { flex-shrink: 0; margin-top: 1px; }
+
+    /* ─── Responsive ────────────────────────────────── */
+    @media (max-width: 600px) {
+      nav { padding: 0 1rem; }
+      #upload-screen { padding: 2.5rem 1rem 4rem; }
+      .drop-zone { padding: 2.5rem 1.2rem; }
+      #results-screen { padding: 1.5rem 1rem 4rem; }
+      .summary-card { padding: 1.5rem 1.3rem; }
+      .metrics-grid { grid-template-columns: 1fr 1fr; }
+      .recs-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 400px) {
+      .metrics-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══ NAV ════════════════════════════════════════ -->
+  <nav>
+    <div class="nav-logo">
+      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="16" cy="16" r="15" fill="rgba(2,192,154,0.15)" stroke="#02C39A" stroke-width="1.5"/>
+        <path d="M8 16h4l3-6 4 12 3-8 2 2h2" stroke="#02C39A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="nav-logo-text">Health<span>Lens</span> AI</span>
+    </div>
+    <span class="ai-badge">AI-Powered</span>
+  </nav>
+
+  <!-- ═══ UPLOAD SCREEN ══════════════════════════════ -->
+  <section id="upload-screen" class="screen active">
+
+    <div class="hero">
+      <div class="hero-eyebrow">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><circle cx="6" cy="6" r="6"/></svg>
+        Instant AI Analysis
+      </div>
+      <h1>Understand your Blood<br/>Report instantly</h1>
+      <p>Upload your blood test PDF or image and get a clear, visual health summary in plain English — powered by AI.</p>
+    </div>
+
+    <!-- API Key Input -->
+    <div style="margin-bottom:1.4rem;">
+      <label for="api-key-input" style="display:block;font-size:.85rem;font-weight:600;color:var(--navy);margin-bottom:.45rem;">Anthropic API Key</label>
+      <input
+        id="api-key-input"
+        type="password"
+        placeholder="sk-ant-…"
+        autocomplete="off"
+        spellcheck="false"
+        style="width:100%;padding:.7rem 1rem;border:1.5px solid rgba(2,128,144,.3);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.9rem;color:var(--text);background:var(--white);outline:none;transition:border-color .2s;"
+        onfocus="this.style.borderColor='var(--teal)'"
+        onblur="this.style.borderColor='rgba(2,128,144,.3)'"
+      />
+      <p style="font-size:.75rem;color:var(--muted);margin-top:.4rem;">Your key is used only in your browser and never sent to any server other than Anthropic.</p>
+    </div>
+
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <div class="drop-zone-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+      </div>
+      <h3>Drop your blood report here</h3>
+      <p>PDF, JPG, or PNG — up to 20 MB</p>
+      <button class="btn-primary" onclick="event.stopPropagation();document.getElementById('file-input').click()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        Choose File
+      </button>
+      <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png" />
+    </div>
+
+    <div class="divider">or</div>
+
+    <button class="btn-demo" id="demo-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="5 3 19 12 5 21 5 3"/>
+      </svg>
+      Analyze Sample Blood Report
+    </button>
+
+    <div class="feature-pills">
+      <div class="pill"><span class="pill-dot"></span>30+ Markers</div>
+      <div class="pill"><span class="pill-dot"></span>Visual Summaries</div>
+      <div class="pill"><span class="pill-dot"></span>Plain English</div>
+      <div class="pill"><span class="pill-dot"></span>Private</div>
+    </div>
+
+  </section>
+
+  <!-- ═══ LOADING SCREEN ═════════════════════════════ -->
+  <section id="loading-screen" class="screen">
+    <div class="spinner-wrap">
+      <div class="spinner"></div>
+      <div class="spinner-inner"></div>
+    </div>
+    <h3>Analyzing your report with AI…</h3>
+    <p>This usually takes 10–20 seconds</p>
+  </section>
+
+  <!-- ═══ RESULTS SCREEN ═════════════════════════════ -->
+  <section id="results-screen" class="screen">
+
+    <div class="results-header">
+      <h2>Your Health Report</h2>
+      <button class="btn-reset" id="reset-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="1 4 1 10 7 10"/>
+          <path d="M3.51 15a9 9 0 1 0 .49-4.5"/>
+        </svg>
+        Analyze Another
+      </button>
+    </div>
+
+    <!-- AI Summary -->
+    <div class="summary-card">
+      <div class="summary-card-label">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><circle cx="5" cy="5" r="5"/></svg>
+        AI Summary
+      </div>
+      <p id="summary-text"></p>
+    </div>
+
+    <!-- Blood Markers -->
+    <h3 class="section-title">Blood Markers</h3>
+    <div class="metrics-grid" id="metrics-grid"></div>
+
+    <!-- Key Insights -->
+    <h3 class="section-title">Key Insights</h3>
+    <div class="insights-list" id="insights-list"></div>
+
+    <!-- Recommendations -->
+    <h3 class="section-title">Recommendations</h3>
+    <div class="recs-grid" id="recs-grid"></div>
+
+    <!-- Disclaimer -->
+    <div class="disclaimer">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span><strong>Medical Disclaimer:</strong> HealthLens is an educational AI tool only. Always consult a qualified healthcare professional before making any health decisions based on these results.</span>
+    </div>
+
+  </section>
+
+  <script>
+    /* ──────────────────────────────────────────────── *
+     *  State & DOM refs                                *
+     * ──────────────────────────────────────────────── */
+    const screens = {
+      upload:  document.getElementById('upload-screen'),
+      loading: document.getElementById('loading-screen'),
+      results: document.getElementById('results-screen'),
+    };
+
+    function showScreen(name) {
+      Object.values(screens).forEach(s => s.classList.remove('active'));
+      screens[name].classList.add('active');
+    }
+
+    /* ──────────────────────────────────────────────── *
+     *  Drag & Drop                                     *
+     * ──────────────────────────────────────────────── */
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file) handleFile(file);
+    });
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) handleFile(fileInput.files[0]);
+    });
+
+    document.getElementById('demo-btn').addEventListener('click', runDemo);
+    document.getElementById('reset-btn').addEventListener('click', resetApp);
+
+    /* ──────────────────────────────────────────────── *
+     *  Sample Report Text                              *
+     * ──────────────────────────────────────────────── */
+    const SAMPLE_REPORT = `
+BLOOD TEST REPORT
+
+Patient: Sample Patient
+Date: 2025-01-15
+
+COMPLETE BLOOD COUNT
+Hemoglobin: 11.2 g/dL       (Normal: 13.5–17.5 g/dL)
+WBC Count:  10800 /µL        (Normal: 4500–11000 /µL)
+Platelets:  420000 /µL       (Normal: 150000–400000 /µL)
+
+LIPID PANEL
+Total Cholesterol: 215 mg/dL (Normal: <200 mg/dL)
+LDL Cholesterol:   142 mg/dL (Normal: <100 mg/dL)
+HDL Cholesterol:    38 mg/dL (Normal: >40 mg/dL)
+Triglycerides:     195 mg/dL (Normal: <150 mg/dL)
+
+GLUCOSE METABOLISM
+Fasting Glucose:   108 mg/dL (Normal: 70–100 mg/dL)
+HbA1c:              5.9%     (Normal: <5.7%)
+
+VITAMINS & MINERALS
+Vitamin D:          18 ng/mL  (Normal: 30–100 ng/mL)
+Iron:               55 µg/dL  (Normal: 60–170 µg/dL)
+`.trim();
+
+    /* ──────────────────────────────────────────────── *
+     *  File → base64                                   *
+     * ──────────────────────────────────────────────── */
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          // result is "data:<mime>;base64,<data>" — strip the prefix
+          const b64 = reader.result.split(',')[1];
+          resolve(b64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    /* ──────────────────────────────────────────────── *
+     *  API helper                                      *
+     * ──────────────────────────────────────────────── */
+    async function callClaude(messages, maxTokens = 2000) {
+      const apiKey = document.getElementById('api-key-input').value.trim();
+      const headers = { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01' };
+      if (apiKey) headers['x-api-key'] = apiKey;
+
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: maxTokens,
+          messages,
+        }),
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error?.message || `API error ${resp.status}`);
+      }
+
+      const data = await resp.json();
+      return data.content[0].text;
+    }
+
+    /* ──────────────────────────────────────────────── *
+     *  Stage 1 — Extract text from file               *
+     * ──────────────────────────────────────────────── */
+    async function extractTextFromFile(file) {
+      const b64 = await fileToBase64(file);
+      const isPdf = file.type === 'application/pdf';
+      const mediaType = isPdf ? 'application/pdf' : file.type;
+
+      const messages = isPdf
+        ? [{ role: 'user', content: [
+            { type: 'document', source: { type: 'base64', media_type: mediaType, data: b64 } },
+            { type: 'text', text: 'Extract ALL blood test values from this report as plain text. List every marker name, measured value with unit, and reference range. Return only the extracted data, no commentary.' },
+          ]}]
+        : [{ role: 'user', content: [
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
+            { type: 'text', text: 'Extract ALL blood test values from this report image as plain text. List every marker name, measured value with unit, and reference range. Return only the extracted data, no commentary.' },
+          ]}];
+
+      return callClaude(messages, 1000);
+    }
+
+    /* ──────────────────────────────────────────────── *
+     *  Stage 2 — Analyse extracted text               *
+     * ──────────────────────────────────────────────── */
+    const ANALYSIS_PROMPT = `You are a friendly medical report explainer. Analyze the following blood test report and return ONLY a JSON object (no markdown, no backticks, no explanation) with this exact structure:
+{
+  "summary": "2-3 sentence plain English overview",
+  "metrics": [
+    {
+      "name": "Marker Name",
+      "value": "11.2 g/dL",
+      "numericValue": 11.2,
+      "min": 13.5,
+      "max": 17.5,
+      "status": "low",
+      "unit": "g/dL"
+    }
+  ],
+  "insights": [
+    {
+      "type": "warn",
+      "title": "Short title",
+      "description": "One or two sentence explanation."
+    }
+  ],
+  "recommendations": [
+    {
+      "title": "Action title",
+      "description": "Brief recommendation."
+    }
+  ]
+}
+Status must be one of: normal, high, low, critical.
+Insight type must be one of: warn, good, info, alert.`;
+
+    async function analyseReport(reportText) {
+      const messages = [{
+        role: 'user',
+        content: `${ANALYSIS_PROMPT}\n\nBlood test report:\n${reportText}`,
+      }];
+
+      const raw = await callClaude(messages, 2000);
+      // Strip possible markdown code fences
+      const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+      return JSON.parse(cleaned);
+    }
+
+    /* ──────────────────────────────────────────────── *
+     *  Handle uploaded file                            *
+     * ──────────────────────────────────────────────── */
+    async function handleFile(file) {
+      try {
+        showScreen('loading');
+        const text = await extractTextFromFile(file);
+        const result = await analyseReport(text);
+        renderResults(result);
+        showScreen('results');
+      } catch (err) {
+        console.error(err);
+        showScreen('upload');
+        showError(err.message);
+      }
+    }
+
+    /* ──────────────────────────────────────────────── *
+     *  Demo run                                        *
+     * ──────────────────────────────────────────────── */
+    async function runDemo() {
+      try {
+        showScreen('loading');
+        const result = await analyseReport(SAMPLE_REPORT);
+        renderResults(result);
+        showScreen('results');
+      } catch (err) {
+        console.error(err);
+        showScreen('upload');
+        showError(err.message);
+      }
+    }
+
+    /* ──────────────────────────────────────────────── *
+     *  Error helper                                    *
+     * ──────────────────────────────────────────────── */
+    function showError(msg) {
+      alert(`Analysis failed: ${msg}\n\nPlease check your API key or try the demo button.`);
+    }
+
+    /* ──────────────────────────────────────────────── *
+     *  Reset                                           *
+     * ──────────────────────────────────────────────── */
+    function resetApp() {
+      fileInput.value = '';
+      document.getElementById('metrics-grid').innerHTML = '';
+      document.getElementById('insights-list').innerHTML = '';
+      document.getElementById('recs-grid').innerHTML = '';
+      document.getElementById('summary-text').textContent = '';
+      showScreen('upload');
+    }
+
+    /* ──────────────────────────────────────────────── *
+     *  Render Results                                  *
+     * ──────────────────────────────────────────────── */
+    function renderResults(data) {
+      // Summary
+      document.getElementById('summary-text').textContent = data.summary || '';
+
+      // Metrics
+      const grid = document.getElementById('metrics-grid');
+      grid.innerHTML = '';
+      (data.metrics || []).forEach(m => {
+        const status = (m.status || 'normal').toLowerCase();
+        const colorMap = { normal: '#3B6D11', high: '#D85A30', low: '#BA7517', critical: '#A32D2D' };
+        const borderColor = colorMap[status] || '#ccc';
+
+        const pct = computeProgressPct(m);
+
+        const card = document.createElement('div');
+        card.className = 'metric-card';
+        card.style.setProperty('--border-color', borderColor);
+        card.innerHTML = `
+          <div class="metric-name">${escHtml(m.name)}</div>
+          <div class="metric-value-row">
+            <span class="metric-value">${escHtml(String(m.numericValue ?? m.value))}<span class="metric-unit"> ${escHtml(m.unit || '')}</span></span>
+            <span class="metric-badge ${status}">${status.toUpperCase()}</span>
+          </div>
+          <div class="metric-range">Range: ${rangeLabel(m)}</div>
+          <div class="progress-track">
+            <div class="progress-fill ${status}" style="width:${pct}%"></div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      // Insights
+      const insightIcons = { warn: '⚠️', good: '✅', info: 'ℹ️', alert: '🔴' };
+      const insightsList = document.getElementById('insights-list');
+      insightsList.innerHTML = '';
+      (data.insights || []).forEach(ins => {
+        const type = (ins.type || 'info').toLowerCase();
+        const card = document.createElement('div');
+        card.className = 'insight-card';
+        card.innerHTML = `
+          <div class="insight-icon ${type}">${insightIcons[type] || 'ℹ️'}</div>
+          <div class="insight-body">
+            <h4>${escHtml(ins.title)}</h4>
+            <p>${escHtml(ins.description)}</p>
+          </div>
+        `;
+        insightsList.appendChild(card);
+      });
+
+      // Recommendations
+      const recsGrid = document.getElementById('recs-grid');
+      recsGrid.innerHTML = '';
+      (data.recommendations || []).forEach(rec => {
+        const card = document.createElement('div');
+        card.className = 'rec-card';
+        card.innerHTML = `<h4>${escHtml(rec.title)}</h4><p>${escHtml(rec.description)}</p>`;
+        recsGrid.appendChild(card);
+      });
+    }
+
+    /* ──────────────────────────────────────────────── *
+     *  Helpers                                         *
+     * ──────────────────────────────────────────────── */
+    function computeProgressPct(m) {
+      const val = parseFloat(m.numericValue);
+      const min = parseFloat(m.min);
+      const max = parseFloat(m.max);
+      if (isNaN(val) || isNaN(min) || isNaN(max) || max === min) return 50;
+
+      // Show position on a scale that extends 30% beyond the range on each side
+      const span = (max - min) * 1.6;
+      const lo   = min - (max - min) * 0.3;
+      const pct  = ((val - lo) / span) * 100;
+      return Math.min(Math.max(pct, 3), 97);
+    }
+
+    function rangeLabel(m) {
+      const min = m.min;
+      const max = m.max;
+      const unit = m.unit || '';
+      if (min != null && max != null) return `${min}–${max} ${unit}`;
+      if (min != null) return `≥ ${min} ${unit}`;
+      if (max != null) return `≤ ${max} ${unit}`;
+      return 'N/A';
+    }
+
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+  </script>
+</body>
+</html>
